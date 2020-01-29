@@ -21,8 +21,11 @@ https://github.com/KhronosGroup/MoltenVK
 `export VULKAN_SDK=/pathtodownloadedvulkansdkunzippedcontents/macOS` <br/>
     - NOTE: You need to run this command in the terminal window that you use to run cmake so the terminal knows this variable.
 4. `xcode-select --install`
-
-
+5. If glfw is not installed, do: <br/>
+`brew install glfw --HEAD`
+6. If glfw is already installed, do: <br/>
+`brew uninstall glfw` <br/>
+`brew install glfw --HEAD`
 
 #### Run with command line
 1. cd into the root of the repo
