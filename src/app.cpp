@@ -362,10 +362,105 @@ int App::start() {
     
     std::cout << "Showing display." << std::endl;
     
+    // Create the command pool
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(this->vkPhysicalDevice);
+    
+    VkCommandPool vkCommandPool;
+    std::vector<VkCommandBuffer> commandBuffers;
+    
+    VkCommandPoolCreateInfo cmdPoolCreateInfo = {};
+    cmdPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmdPoolCreateInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+    
+    if(vkCreateCommandPool(this->vkDevice, &cmdPoolCreateInfo, NULL, &vkCommandPool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create command pool");
+    }
+    
+    
+    // Create the command buffer
+    VkCommandBufferAllocateInfo cmdBufAllocInfo = {};
+    cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdBufAllocInfo.commandPool = vkCommandPool;
+    cmdBufAllocInfo.commandBufferCount = this->swapChainImageViews.size();
+    cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    
+    commandBuffers.resize(this->swapChainImageViews.size());
+    
+    if(vkAllocateCommandBuffers(this->vkDevice, &cmdBufAllocInfo, &commandBuffers[0]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create command buffers");
+    }
+    
+    
+    // Record the command buffers
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    
+    VkClearColorValue clearColor1 = { 164.0f/256.0f, 30.0f/256.0f, 34.0f/256.0f, 0.0f };
+    VkClearColorValue clearColor2 = { 0.0f/256.0f, 30.0f/256.0f, 0.0f/256.0f, 0.0f };
+
+    VkClearValue clearValue1 = {};
+    clearValue1.color = clearColor1;
+    
+    VkClearValue clearValue2 = {};
+    clearValue1.color = clearColor2;
+    
+    VkImageSubresourceRange imageRange = {};
+    imageRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageRange.levelCount = 1;
+    imageRange.layerCount = 1;
+    
+    for (uint i = 0 ; i < commandBuffers.size() ; i++) {
+        if(vkBeginCommandBuffer(commandBuffers[i], &beginInfo) != VK_SUCCESS) {
+            throw std::runtime_error("error 1");
+        }
+
+        if(i==0) {
+            vkCmdClearColorImage(commandBuffers[i], this->swapChainImages[i], VK_IMAGE_LAYOUT_GENERAL, &clearColor1, 1, &imageRange);
+
+            if(vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
+                throw std::runtime_error("error 2");
+            }
+        } else {
+            vkCmdClearColorImage(commandBuffers[i], this->swapChainImages[i], VK_IMAGE_LAYOUT_GENERAL, &clearColor2, 1, &imageRange);
+
+            if(vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
+                throw std::runtime_error("error 2");
+            }
+        }
+    }
+    
+    
+    
     // Display the GUI and main loop
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
+        
+        uint ImageIndex = 0;
+
+        if(vkAcquireNextImageKHR(this->vkDevice, this->vkSwapChain, UINT64_MAX, NULL, NULL, &ImageIndex) != VK_SUCCESS) {
+            throw std::runtime_error("error 3");
+        }
+        
+        VkSubmitInfo submitInfo = {};
+        submitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount   = 1;
+        submitInfo.pCommandBuffers      = &commandBuffers[ImageIndex];
+        
+        if(vkQueueSubmit(vkGraphicsQueue, 1, &submitInfo, NULL) != VK_SUCCESS) {
+            throw std::runtime_error("error 4");
+        }
+        
+        VkPresentInfoKHR presentInfo = {};
+        presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        presentInfo.swapchainCount     = 1;
+        presentInfo.pSwapchains        = &this->vkSwapChain;
+        presentInfo.pImageIndices      = &ImageIndex;
+        
+        if(vkQueuePresentKHR(this->vkPresentQueue, &presentInfo) != VK_SUCCESS) {
+            throw std::runtime_error("error 5");
+        }
     }
     
     glfwDestroyWindow(window);
