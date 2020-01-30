@@ -8,7 +8,12 @@
 class App {
 public:
     App();
+    ~App();
     int start();
+    void setupVulkan();
     
     GLFWwindow *window;
+    
+private:
+    VkInstance vkInstance;
 };
