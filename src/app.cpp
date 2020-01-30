@@ -1,5 +1,6 @@
 #include "app.h"
 #include <iostream>
+#include <vector>
 
 
 App::App() {
@@ -56,13 +57,45 @@ void App::setupVulkan() {
     createInfo.enabledLayerCount = 0;
 
     VkResult result = vkCreateInstance(&createInfo, nullptr, &this->vkInstance);
-
-    std::cout << result << std::endl;
     
     if (vkCreateInstance(&createInfo, nullptr, &this->vkInstance) != VK_SUCCESS) {
         throw std::runtime_error("failed to create instance!");
     }
+    
+    
+    // Create the physical device
+    uint32_t deviceCount = 0;
+    vkEnumeratePhysicalDevices(this->vkInstance, &deviceCount, nullptr);
+    
+    if (deviceCount == 0) {
+        throw std::runtime_error("failed to find GPUs with Vulkan support!");
+    }
+    
+    std::vector<VkPhysicalDevice> devices(deviceCount);
+    vkEnumeratePhysicalDevices(this->vkInstance, &deviceCount, devices.data());
+    
+    for (const auto& device : devices) {
+        if (isDeviceSuitable(device)) {
+            this->vkPhysicalDevice = device;
+            break;
+        }
+    }
 
+    if (this->vkPhysicalDevice == VK_NULL_HANDLE) {
+        throw std::runtime_error("failed to find a suitable GPU!");
+    }
+    
+    
+    //
+
+}
+
+QueueFamilyIndices App::findQueueFamilies(VkPhysicalDevice device) {
+    
+}
+
+bool App::isDeviceSuitable(VkPhysicalDevice device) {
+    return true;
 }
 
 int App::start() {
